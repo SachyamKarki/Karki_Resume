@@ -6,6 +6,9 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Trust proxy for rate limiting (required for Render)
+app.set('trust proxy', 1);
+
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -54,7 +57,7 @@ const createTransporter = () => {
     throw new Error('Email credentials not configured. Please set EMAIL_USER and EMAIL_PASS in your .env file');
   }
 
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER, 
@@ -81,20 +84,20 @@ const sanitizeInput = (input) => {
 };
 
 app.post('/api/contact', async (req, res) => {
+  // Sanitize and validate inputs following OWASP guidelines (moved outside try block)
+  const { name, email, subject, message } = req.body;
+  
+  const sanitizedName = sanitizeInput(name);
+  const sanitizedEmail = sanitizeInput(email);
+  const sanitizedSubject = sanitizeInput(subject);
+  const sanitizedMessage = sanitizeInput(message);
+
   try {
     console.log('Contact form request received:', { 
       origin: req.headers.origin,
       ip: req.ip,
       userAgent: req.get('User-Agent')
     });
-
-    // Sanitize and validate inputs following OWASP guidelines
-    const { name, email, subject, message } = req.body;
-    
-    const sanitizedName = sanitizeInput(name);
-    const sanitizedEmail = sanitizeInput(email);
-    const sanitizedSubject = sanitizeInput(subject);
-    const sanitizedMessage = sanitizeInput(message);
 
     // Validate sanitized inputs
     if (!sanitizedName || !sanitizedEmail || !sanitizedSubject || !sanitizedMessage) {
