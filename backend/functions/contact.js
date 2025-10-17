@@ -1,32 +1,18 @@
-const express = require('express');
 const nodemailer = require('nodemailer');
-const cors = require('cors');
-require('dotenv').config();
 
-const app = express();
-const PORT = process.env.PORT || 5001;
-
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001', 
-    'http://localhost:5173',
-    'https://sachyamkarki.github.io',
-    'https://shakshamkarki.netlify.app',
-    'https://*.netlify.app',
-    process.env.FRONTEND_URL
-  ].filter(Boolean),
-  credentials: true
-}));
-app.use(express.json());
+// CORS headers for Netlify Functions
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 const createTransporter = () => {
-
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    throw new Error('Email credentials not configured. Please set EMAIL_USER and EMAIL_PASS in your .env file');
+    throw new Error('Email credentials not configured. Please set EMAIL_USER and EMAIL_PASS in your environment variables');
   }
 
-  return nodemailer.createTransport({
+  return nodemailer.createTransporter({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER, 
@@ -35,27 +21,59 @@ const createTransporter = () => {
   });
 };
 
-app.post('/api/contact', async (req, res) => {
-  try {
-    const { name, email, subject, message } = req.body;
+exports.handler = async (event, context) => {
+  // Handle CORS preflight requests
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: ''
+    };
+  }
 
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ 
+        success: false, 
+        message: 'Method not allowed' 
+      })
+    };
+  }
+
+  try {
+    const { name, email, subject, message } = JSON.parse(event.body);
+
+    // Validate required fields
     if (!name || !email || !subject || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'All fields are required'
-      });
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          message: 'All fields are required'
+        })
+      };
     }
 
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a valid email address'
-      });
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          message: 'Please provide a valid email address'
+        })
+      };
     }
 
     const transporter = createTransporter();
 
+    // Main email to you
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: process.env.EMAIL_USER, 
@@ -105,6 +123,7 @@ app.post('/api/contact', async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
+    // Confirmation email to the sender
     const confirmationMailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -163,10 +182,14 @@ app.post('/api/contact', async (req, res) => {
 
     await transporter.sendMail(confirmationMailOptions);
 
-    res.status(200).json({
-      success: true,
-      message: 'Message sent successfully!'
-    });
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        message: 'Message sent successfully!'
+      })
+    };
 
   } catch (error) {
     console.error('Error sending email:', error);
@@ -181,19 +204,14 @@ app.post('/api/contact', async (req, res) => {
       errorMessage = 'Network error. Please check your internet connection.';
     }
 
-    res.status(500).json({
-      success: false,
-      message: errorMessage,
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        message: errorMessage,
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      })
+    };
   }
-});
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-});
+};

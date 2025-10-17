@@ -1,0 +1,12 @@
+{
+  "name": "karki-resume-netlify-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for Karki Resume Portfolio",
+  "main": "index.js",
+  "dependencies": {
+    "nodemailer": "^7.0.9"
+  },
+  "engines": {
+    "node": "18"
+  }
+}
