@@ -22,6 +22,14 @@ const createTransporter = () => {
 };
 
 exports.handler = async (event, context) => {
+  // Debug logging
+  console.log('Contact function called');
+  console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'NOT SET');
+  console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'SET' : 'NOT SET');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('Event method:', event.httpMethod);
+  console.log('Event body:', event.body);
+
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -193,6 +201,13 @@ exports.handler = async (event, context) => {
 
   } catch (error) {
     console.error('Error sending email:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      syscall: error.syscall
+    });
 
     let errorMessage = 'Failed to send message. Please try again later.';
 
@@ -210,7 +225,12 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         success: false,
         message: errorMessage,
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        debug: {
+          hasEmailUser: !!process.env.EMAIL_USER,
+          hasEmailPass: !!process.env.EMAIL_PASS,
+          nodeEnv: process.env.NODE_ENV
+        }
       })
     };
   }
