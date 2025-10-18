@@ -123,7 +123,7 @@ export const useContactForm = () => {
     setSubmitStatus(null)
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : 'https://karki-resume-backend.onrender.com')
+      const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5001' : '')
 
       const response = await fetch(`${API_URL}/api/contact`, {
         method: 'POST',
