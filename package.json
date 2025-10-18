@@ -17,6 +17,9 @@
     "netlify:dev": "netlify dev --functions backend/functions",
     "netlify:build": "cd frontend && npm run build"
   },
+  "dependencies": {
+    "nodemailer": "^7.0.9"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
