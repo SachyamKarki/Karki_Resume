@@ -30,6 +30,23 @@ exports.handler = async (event, context) => {
   console.log('Event method:', event.httpMethod);
   console.log('Event body:', event.body);
 
+  // Test if we can create transporter
+  try {
+    const testTransporter = createTransporter();
+    console.log('Transporter created successfully');
+  } catch (transporterError) {
+    console.error('Failed to create transporter:', transporterError);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        message: 'Email service configuration error',
+        error: transporterError.message
+      })
+    };
+  }
+
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
